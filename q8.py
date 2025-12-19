@@ -116,7 +116,7 @@ if __name__ == "__main__":
                         help='Prefix path of spatial-bench, e.g., "sf1" folder containing trip and zone (default: None)')
     parser.add_argument('mode', nargs='?', default='gpu', choices=['gpu', 'cpu'],
                         help='Execution mode: "gpu" or "cpu" (default: gpu)')
-    parser.add_argument('--repeat', '-r', type=int, default=5,
+    parser.add_argument('--repeat', '-r', type=int, default=1,
                         help='Number of repeated runs (default: 5)')
     parser.add_argument('--partitions', '-p', type=int, default=None,
                         help='Number of target partitions for DataFusion (default: auto)')
@@ -126,4 +126,4 @@ if __name__ == "__main__":
                         help='LIMIT for trip table (optional, no limit if not specified)')
     args = parser.parse_args()
 
-    sys.exit(test_q8_with_external_tables(args.data_prefix, args.mode, args.partitions, args.building_limit, args.trip_limit))
+    sys.exit(test_q8_with_external_tables(args.data_prefix, args.mode, args.repeat, args.partitions, args.building_limit, args.trip_limit))

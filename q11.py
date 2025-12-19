@@ -106,7 +106,12 @@ def test_q11_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
                                        ON ST_Within(t.dropoff_geom, dropoff_zone.geom)
                          WHERE pickup_zone.z_zonekey != dropoff_zone.z_zonekey
                          """)
-
+        # result = ctx.sql("""
+        #                  SELECT COUNT(*) AS cross_zone_trip_count
+        #                  FROM trip_geom t
+        #                   JOIN zone_geom pickup_zone
+        #                        ON ST_Within(t.pickup_geom, pickup_zone.geom)
+        #                  """)
         result.show()
 
     elapsed = (time.time() - start_time) / repeat
@@ -122,7 +127,7 @@ if __name__ == "__main__":
                         help='Prefix path of spatial-bench, e.g., "sf1" folder containing trip and zone (default: None)')
     parser.add_argument('mode', nargs='?', default='gpu', choices=['gpu', 'cpu'],
                         help='Execution mode: "gpu" or "cpu" (default: gpu)')
-    parser.add_argument('--repeat', '-r', type=int, default=5,
+    parser.add_argument('--repeat', '-r', type=int, default=1,
                         help='Number of repeated runs (default: 5)')
     parser.add_argument('--partitions', '-p', type=int, default=None,
                         help='Number of target partitions for DataFusion (default: auto)')
