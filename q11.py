@@ -23,6 +23,7 @@ def test_q11_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
     ctx = sedonadb.connect()
     if mode.lower() == 'gpu':
         ctx.sql("SET sedona.spatial_join.gpu.enable = true")
+        ctx.sql("SET datafusion.execution.batch_size = 2000000")
         print("GPU mode enabled")
     else:
         ctx.sql("SET sedona.spatial_join.gpu.enable = false")
@@ -95,8 +96,9 @@ def test_q11_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
     print("Query: Count trips crossing between different zones")
     print()
 
-    start_time = time.time()
-    for _ in range(repeat):
+    for i in range(repeat + 1):
+        if i == 1:  # Start counting after warmup
+            start_time = time.time()
         result = ctx.sql("""
                          SELECT COUNT(*) AS cross_zone_trip_count
                          FROM trip_geom t
@@ -106,12 +108,6 @@ def test_q11_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
                                        ON ST_Within(t.dropoff_geom, dropoff_zone.geom)
                          WHERE pickup_zone.z_zonekey != dropoff_zone.z_zonekey
                          """)
-        # result = ctx.sql("""
-        #                  SELECT COUNT(*) AS cross_zone_trip_count
-        #                  FROM trip_geom t
-        #                   JOIN zone_geom pickup_zone
-        #                        ON ST_Within(t.pickup_geom, pickup_zone.geom)
-        #                  """)
         result.show()
 
     elapsed = (time.time() - start_time) / repeat

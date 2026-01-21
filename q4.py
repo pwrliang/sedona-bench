@@ -25,6 +25,7 @@ def test_q4_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     ctx = sedonadb.connect()
     if mode.lower() == 'gpu':
         ctx.sql("SET sedona.spatial_join.gpu.enable = true")
+        ctx.sql("SET datafusion.execution.batch_size = 2000000")
         print("GPU mode enabled")
     else:
         ctx.sql("SET sedona.spatial_join.gpu.enable = false")
@@ -104,8 +105,9 @@ def test_q4_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     print(f"Query: Zone distribution of top {top_n} trips by tip amount")
     print()
 
-    start_time = time.time()
-    for _ in range(repeat):
+    for i in range(repeat + 1):
+        if i == 1:  # Start counting after warmup
+            start_time = time.time()
         result = ctx.sql(f"""
             SELECT
                 z.z_zonekey,
@@ -123,7 +125,7 @@ def test_q4_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
             GROUP BY z.z_zonekey, z.z_name
             ORDER BY trip_count DESC, z.z_zonekey ASC
         """)
-        result.show(20)
+        result.show()
 
     elapsed = (time.time() - start_time) / repeat
 

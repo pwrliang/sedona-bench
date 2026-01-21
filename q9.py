@@ -22,6 +22,7 @@ def test_q9_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     ctx = sedonadb.connect()
     if mode.lower() == 'gpu':
         ctx.sql("SET sedona.spatial_join.gpu.enable = true")
+        ctx.sql("SET datafusion.execution.batch_size = 2000000")
         print("GPU mode enabled")
     else:
         ctx.sql("SET sedona.spatial_join.gpu.enable = false")
@@ -99,8 +100,9 @@ def test_q9_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     print("Query: Building conflation using IoU to detect overlapping buildings")
     print()
 
-    start_time = time.time()
-    for _ in range(repeat):
+    for i in range(repeat + 1):
+        if i == 1:  # Start counting after warmup
+            start_time = time.time()
         result = ctx.sql("""
                          WITH b1 AS (SELECT b_buildingkey AS id, geom
                                      FROM building_geom),
@@ -126,7 +128,7 @@ def test_q9_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
                          ORDER BY iou DESC, building_1 ASC, building_2 ASC
                          """)
 
-        result.show(20)
+        result.show()
 
     elapsed = (time.time() - start_time) / repeat
 

@@ -22,6 +22,7 @@ def test_q2_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     ctx = sedonadb.connect()
     if mode.lower() == 'gpu':
         ctx.sql("SET sedona.spatial_join.gpu.enable = true")
+        ctx.sql("SET datafusion.execution.batch_size = 2000000")
         print("GPU mode enabled")
     else:
         ctx.sql("SET sedona.spatial_join.gpu.enable = false")
@@ -90,15 +91,16 @@ def test_q2_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     print("Running Q2 query ...")
     print("Query: Count trips in County using spatial join")
     print()
-    start_time = time.time()
-    for _ in range(repeat):
+    for i in range(repeat + 1):
+        if i == 1:  # Start counting after warmup
+            start_time = time.time()
         result = ctx.sql("""
                          SELECT COUNT(*) AS trip_count_in_county
                          FROM zone_geom z
                                   JOIN trip_geom t
                                        ON ST_Intersects(z.geom, t.geom)
                          """)
-        result.show(3)
+        result.show()
     elapsed = (time.time() - start_time) / repeat
 
     print(f"Avg execution time ({mode.upper()} mode): {elapsed:.3f}s")

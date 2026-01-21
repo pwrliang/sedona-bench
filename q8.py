@@ -9,10 +9,13 @@ import time
 import argparse
 import sedonadb
 
-def test_q8_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_partitions=None, building_limit=None, trip_limit=None):
+
+def test_q8_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_partitions=None, building_limit=None,
+                                 trip_limit=None):
     print(f"Testing Q8 Execution with {mode.upper()} using External Tables")
     if building_limit or trip_limit:
-        print(f"Limits: building={building_limit if building_limit else 'none'}, trip={trip_limit if trip_limit else 'none'}")
+        print(
+            f"Limits: building={building_limit if building_limit else 'none'}, trip={trip_limit if trip_limit else 'none'}")
     else:
         print("No limits applied - using full dataset")
     print()
@@ -21,6 +24,7 @@ def test_q8_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     ctx = sedonadb.connect()
     if mode.lower() == 'gpu':
         ctx.sql("SET sedona.spatial_join.gpu.enable = true")
+        ctx.sql("SET datafusion.execution.batch_size = 2000000")
         print("GPU mode enabled")
     else:
         ctx.sql("SET sedona.spatial_join.gpu.enable = false")
@@ -91,24 +95,24 @@ def test_q8_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target_
     print("Query: Count pickups within each building using ST_Within")
     print()
 
-    start_time = time.time()
-    for _ in range(repeat):
+    for i in range(repeat + 1):
+        if i == 1:  # Start counting after warmup
+            start_time = time.time()
         result = ctx.sql("""
-            SELECT b.b_buildingkey, b.b_name, COUNT(*) AS nearby_pickup_count
-            FROM trip_geom t
-            JOIN building_geom b
-            ON ST_Within(t.geom, b.geom)
-            GROUP BY b.b_buildingkey, b.b_name
-            ORDER BY nearby_pickup_count DESC, b.b_buildingkey ASC
-        """)
-
-        result.show(20)
-
+                         SELECT b.b_buildingkey, b.b_name, COUNT(*) AS nearby_pickup_count
+                         FROM trip_geom t
+                                  JOIN building_geom b
+                                       ON ST_Within(t.geom, b.geom)
+                         GROUP BY b.b_buildingkey, b.b_name
+                         ORDER BY nearby_pickup_count DESC, b.b_buildingkey ASC
+                         """)
+        result.show()
     elapsed = (time.time() - start_time) / repeat
 
     print(f"Avg execution time ({mode.upper()} mode): {elapsed:.3f}s")
 
     return 0
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Q8 Spatial Join Performance Test')
@@ -126,4 +130,6 @@ if __name__ == "__main__":
                         help='LIMIT for trip table (optional, no limit if not specified)')
     args = parser.parse_args()
 
-    sys.exit(test_q8_with_external_tables(args.data_prefix, args.mode, args.repeat, args.partitions, args.building_limit, args.trip_limit))
+    sys.exit(
+        test_q8_with_external_tables(args.data_prefix, args.mode, args.repeat, args.partitions, args.building_limit,
+                                     args.trip_limit))

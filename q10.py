@@ -23,6 +23,7 @@ def test_q10_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
     ctx = sedonadb.connect()
     if mode.lower() == 'gpu':
         ctx.sql("SET sedona.spatial_join.gpu.enable = true")
+        ctx.sql("SET datafusion.execution.batch_size = 2000000")
         print("GPU mode enabled")
     else:
         ctx.sql("SET sedona.spatial_join.gpu.enable = false")
@@ -99,8 +100,9 @@ def test_q10_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
     print("Query: Zone statistics for trips starting within each zone")
     print()
 
-    start_time = time.time()
-    for _ in range(repeat):
+    for i in range(repeat + 1):
+        if i == 1:  # Start counting after warmup
+            start_time = time.time()
         result = ctx.sql("""
                          SELECT z.z_zonekey,
                                 z.z_name                              AS pickup_zone,
@@ -113,8 +115,7 @@ def test_q10_with_external_tables(data_prefix=None, mode='gpu', repeat=5, target
                          GROUP BY z.z_zonekey, z.z_name
                          ORDER BY avg_duration DESC NULLS LAST, z.z_zonekey ASC
                          """)
-        result.show(20)
-
+        result.show()
     elapsed = (time.time() - start_time) / repeat
 
     print(f"Avg execution time ({mode.upper()} mode): {elapsed:.3f}s")
